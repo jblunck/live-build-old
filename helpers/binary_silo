@@ -7,25 +7,11 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'installs silo into binary')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Binary_silo ()
+{
 if [ "${LH_BOOTLOADER}" != "silo" ]
 then
-	exit 0
+	return
 fi
 
 # Check image type
@@ -35,7 +21,7 @@ case "${LH_BINARY_IMAGES}" in
 
 	net)
 		# silo not required for sparc netbooting
-		exit 0
+		return
 		;;
 esac
 
@@ -50,12 +36,6 @@ Check_stagefile .stage/binary_silo
 # Checking silo templates
 Check_templates silo
 
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
-
 # Check architecture
 Check_architecture sparc
 
@@ -67,42 +47,6 @@ Restore_cache cache/packages_binary
 
 # Installing depends
 Install_package
-
-# Local functions
-Silo_live_entry ()
-{
-	LABEL="${1}"
-	KERNEL="${2}"
-	INITRD="${3}"
-	APPEND="${4}"
-
-	DIRECTORY="/$(basename ${DESTDIR_LIVE})"
-
-	LINUX_LIVE="${LINUX_LIVE}\nimage=${DIRECTORY}/${KERNEL}\n"
-	LINUX_LIVE="${LINUX_LIVE}\t  label=${LABEL}\n"
-	LINUX_LIVE="${LINUX_LIVE}\t  initrd=${DIRECTORY}/${INITRD}\n"
-	LINUX_LIVE="${LINUX_LIVE}\t  append=\"boot=${INITFS} LH_BOOTAPPEND_LIVE ${APPEND}\"\n"
-}
-
-Silo_install_entry ()
-{
-	LABEL="${1}"
-	KERNEL="${2}"
-	INITRD="${3}"
-	APPEND="${4}"
-
-	DIRECTORY="/$(basename ${DESTDIR_INSTALL})"
-
-	if [ "${LABEL}" != "rescue" ] && [ "${LABEL}" != "rescuegui" ]
-	then
-		APPEND="${APPEND} quiet"
-	fi
-
-	LINUX_INSTALL="${LINUX_INSTALL}\nimage=${DIRECTORY}/${KERNEL}\n"
-	LINUX_INSTALL="${LINUX_INSTALL}\t  label=${LABEL}\n"
-	LINUX_INSTALL="${LINUX_INSTALL}\t  initrd=${DIRECTORY}/${INITRD}\n"
-	LINUX_INSTALL="${LINUX_INSTALL}\t  append=\"LH_BOOTAPPEND_LIVE ${APPEND} LH_BOOTAPPEND_INSTALL\"\n"
-}
 
 # Setting destination directories
 DESTDIR_INSTALL="binary/install"
@@ -270,3 +214,39 @@ Remove_package
 
 # Creating stage file
 Create_stagefile .stage/binary_silo
+}
+
+Silo_live_entry ()
+{
+	LABEL="${1}"
+	KERNEL="${2}"
+	INITRD="${3}"
+	APPEND="${4}"
+
+	DIRECTORY="/$(basename ${DESTDIR_LIVE})"
+
+	LINUX_LIVE="${LINUX_LIVE}\nimage=${DIRECTORY}/${KERNEL}\n"
+	LINUX_LIVE="${LINUX_LIVE}\t  label=${LABEL}\n"
+	LINUX_LIVE="${LINUX_LIVE}\t  initrd=${DIRECTORY}/${INITRD}\n"
+	LINUX_LIVE="${LINUX_LIVE}\t  append=\"boot=${INITFS} LH_BOOTAPPEND_LIVE ${APPEND}\"\n"
+}
+
+Silo_install_entry ()
+{
+	LABEL="${1}"
+	KERNEL="${2}"
+	INITRD="${3}"
+	APPEND="${4}"
+
+	DIRECTORY="/$(basename ${DESTDIR_INSTALL})"
+
+	if [ "${LABEL}" != "rescue" ] && [ "${LABEL}" != "rescuegui" ]
+	then
+		APPEND="${APPEND} quiet"
+	fi
+
+	LINUX_INSTALL="${LINUX_INSTALL}\nimage=${DIRECTORY}/${KERNEL}\n"
+	LINUX_INSTALL="${LINUX_INSTALL}\t  label=${LABEL}\n"
+	LINUX_INSTALL="${LINUX_INSTALL}\t  initrd=${DIRECTORY}/${INITRD}\n"
+	LINUX_INSTALL="${LINUX_INSTALL}\t  append=\"LH_BOOTAPPEND_LIVE ${APPEND} LH_BOOTAPPEND_INSTALL\"\n"
+}

@@ -7,22 +7,8 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'execute local hooks in chroot')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Chroot_local_hooks ()
+{
 Echo_message "Begin executing local hooks..."
 
 # Requiring stage file
@@ -30,12 +16,6 @@ Require_stagefile .stage/config .stage/bootstrap
 
 # Checking stage file
 Check_stagefile .stage/chroot_local-hooks
-
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
 
 # Processing local-hooks
 if Find_files config/chroot_local-hooks/*
@@ -55,7 +35,7 @@ then
 		fi
 
 		# Executing hook
-		Chroot chroot "/root/$(basename ${HOOK})" || ( Echo_error "${HOOK} failed (exit non-zero). You should check for errors."; exit 1 )
+		Chroot_target chroot "/root/$(basename ${HOOK})" || ( Echo_error "${HOOK} failed (exit non-zero). You should check for errors."; exit 1 )
 
 		# Removing hook
 		rm -f chroot/root/"$(basename ${HOOK})"
@@ -67,3 +47,4 @@ then
 	# Creating stage file
 	Create_stagefile .stage/chroot_local-hooks
 fi
+}

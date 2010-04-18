@@ -7,26 +7,15 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'cache bootstrap stage')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Bootstrap_cache ()
+{
 # Check architecture
 Check_crossarchitecture
 
 Echo_message "Begin caching bootstrap stage..."
+
+# Ensure that a system is built as root
+Testroot
 
 for STAGE in ${LH_CACHE_STAGES}
 do
@@ -39,12 +28,6 @@ do
 
 				if [ -d cache/stages_bootstrap ]
 				then
-					# Checking lock file
-					Check_lockfile .lock
-
-					# Creating lock file
-					Create_lockfile .lock
-
 					# Removing old chroot
 					rm -rf chroot
 
@@ -59,20 +42,12 @@ do
 					# Creating stage file
 					Create_stagefile .stage/bootstrap_cache.restore
 					Create_stagefile .stage/bootstrap
-
-					exit 0
 				fi
 				;;
 
 			save)
 				# Checking stage file
 				Check_stagefile .stage/bootstrap_cache.save
-
-				# Checking lock file
-				Check_lockfile .lock
-
-				# Creating lock file
-				Create_lockfile .lock
 
 				rm -rf cache/stages_bootstrap
 
@@ -91,3 +66,4 @@ do
 		esac
 	fi
 done
+}

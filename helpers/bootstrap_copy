@@ -7,25 +7,11 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'bootstrap by copying the host system')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Bootstrap_copy ()
+{
 if [ "${LH_BOOTSTRAP}" != "copy" ]
 then
-	exit 0
+	return
 fi
 
 # Check architecture
@@ -34,16 +20,10 @@ Check_crossarchitecture
 Echo_message "Begin bootstrapping system..."
 
 # Ensure that a system is built as root
-lh testroot
+Testroot
 
 # Checking stage file
 Check_stagefile .stage/bootstrap
-
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
 
 # Copying host system
 mkdir chroot
@@ -53,3 +33,4 @@ cd ..
 
 # Creating stage file
 Create_stagefile .stage/bootstrap
+}

@@ -7,25 +7,11 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'debian sources')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Source_debian ()
+{
 if [ "${LH_SOURCE}" != "true" ]
 then
-	exit 0
+	return
 fi
 
 Echo_message "Begin downloading sources..."
@@ -36,12 +22,6 @@ Require_stagefile .stage/config .stage/bootstrap
 # Checking stage file
 Check_stagefile .stage/source_debian
 
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
-
 # Remove old sources
 if [ -d source/debian ]
 then
@@ -49,7 +29,7 @@ then
 fi
 
 # Download sources
-Chroot chroot "dpkg --get-selections" | awk '{ print $1 }' > source-selection.txt
+Chroot_target chroot "dpkg --get-selections" | awk '{ print $1 }' > source-selection.txt
 
 cat >> source-selection.txt << EOF
 ${LH_BOOTLOADER}
@@ -102,7 +82,7 @@ MISSING=""
 grep . source-selection.txt | \
 while read PACKAGE
 do
-	if ! Chroot chroot "apt-get ${APT_OPTIONS} --download-only source ${PACKAGE}"
+	if ! Chroot_target chroot "apt-get ${APT_OPTIONS} --download-only source ${PACKAGE}"
 	then
 		MISSING="${MISSING} ${PACKAGE}"
 	fi
@@ -118,7 +98,7 @@ EOF
 
 	for PACKAGE in ${MISSING}
 	do
-		Chroot chroot "dpkg -l ${PACKAGE}" | tail -n1 >> source/missing-source.txt
+		Chroot_target chroot "dpkg -l ${PACKAGE}" | tail -n1 >> source/missing-source.txt
 	done
 fi
 
@@ -151,3 +131,4 @@ done
 
 # Creating stage file
 Create_stagefile .stage/source_debian
+}

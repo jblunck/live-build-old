@@ -7,25 +7,11 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'installs grub into binary')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Binary_grub ()
+{
 if [ "${LH_BOOTLOADER}" != "grub" ]
 then
-	exit 0
+	return
 fi
 
 Echo_message "Begin installing grub..."
@@ -39,12 +25,6 @@ Check_stagefile .stage/binary_grub
 # Checking grub templates
 Check_templates grub
 
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
-
 # Check architecture
 Check_architecture amd64 i386
 Check_crossarchitecture
@@ -57,64 +37,6 @@ Restore_cache cache/packages_binary
 
 # Installing depends
 Install_package
-
-# Local functions
-Grub_live_entry ()
-{
-	LABEL="${1}"
-	KERNEL="${2}"
-	INITRD="${3}"
-	APPEND="${4}"
-
-	LINUX_LIVE="${LINUX_LIVE}\ntitle\t\tDebian GNU/Linux - ${LABEL}"
-	LINUX_LIVE="${LINUX_LIVE}\nkernel\t\t/${KERNEL} boot=${INITFS} LH_BOOTAPPEND_LIVE ${APPEND}"
-	LINUX_LIVE="${LINUX_LIVE}\ninitrd\t\t/${INITRD}"
-}
-
-Grub_install_entry ()
-{
-	LABEL="${1}"
-	KERNEL="${2}"
-	INITRD="${3}"
-	APPEND="${4}"
-
-	QAPPEND="quiet"
-
-	for TYPE in Install Expert Rescue Auto
-	do
-		case "${TYPE}" in
-			Install)
-				TAPPEND="${APPEND} ${QAPPEND}"
-				;;
-
-			Expert)
-				TAPPEND="priority=low ${APPEND}"
-				;;
-
-			Rescue)
-				TAPPEND="rescue/enable=true ${APPEND} ${QAPPEND}"
-				;;
-
-			Auto)
-				TAPPEND="auto=true priority=critical ${APPEND} ${QAPPEND}"
-				;;
-		esac
-
-		case "${LABEL}" in
-			Text)
-				TYPE_SUFFIX=""
-				;;
-			GUI)
-				TYPE_SUFFIX="gui"
-				;;
-		esac
-
-
-		LINUX_INSTALL="${LINUX_INSTALL}\ntitle\t\t${LABEL} ${TYPE}"
-		LINUX_INSTALL="${LINUX_INSTALL}\nkernel\t\t/${KERNEL} ${TAPPEND} ${LH_BOOTAPPEND_INSTALL}"
-		LINUX_INSTALL="${LINUX_INSTALL}\ninitrd\t\t/${INITRD}"
-	done
-}
 
 case "${LH_INITRAMFS}" in
 	casper)
@@ -337,3 +259,61 @@ Remove_package
 
 # Creating stage file
 Create_stagefile .stage/binary_grub
+}
+
+Grub_live_entry ()
+{
+	LABEL="${1}"
+	KERNEL="${2}"
+	INITRD="${3}"
+	APPEND="${4}"
+
+	LINUX_LIVE="${LINUX_LIVE}\ntitle\t\tDebian GNU/Linux - ${LABEL}"
+	LINUX_LIVE="${LINUX_LIVE}\nkernel\t\t/${KERNEL} boot=${INITFS} LH_BOOTAPPEND_LIVE ${APPEND}"
+	LINUX_LIVE="${LINUX_LIVE}\ninitrd\t\t/${INITRD}"
+}
+
+Grub_install_entry ()
+{
+	LABEL="${1}"
+	KERNEL="${2}"
+	INITRD="${3}"
+	APPEND="${4}"
+
+	QAPPEND="quiet"
+
+	for TYPE in Install Expert Rescue Auto
+	do
+		case "${TYPE}" in
+			Install)
+				TAPPEND="${APPEND} ${QAPPEND}"
+				;;
+
+			Expert)
+				TAPPEND="priority=low ${APPEND}"
+				;;
+
+			Rescue)
+				TAPPEND="rescue/enable=true ${APPEND} ${QAPPEND}"
+				;;
+
+			Auto)
+				TAPPEND="auto=true priority=critical ${APPEND} ${QAPPEND}"
+				;;
+		esac
+
+		case "${LABEL}" in
+			Text)
+				TYPE_SUFFIX=""
+				;;
+			GUI)
+				TYPE_SUFFIX="gui"
+				;;
+		esac
+
+
+		LINUX_INSTALL="${LINUX_INSTALL}\ntitle\t\t${LABEL} ${TYPE}"
+		LINUX_INSTALL="${LINUX_INSTALL}\nkernel\t\t/${KERNEL} ${TAPPEND} ${LH_BOOTAPPEND_INSTALL}"
+		LINUX_INSTALL="${LINUX_INSTALL}\ninitrd\t\t/${INITRD}"
+	done
+}

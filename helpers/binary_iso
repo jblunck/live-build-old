@@ -7,22 +7,8 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'build iso binary image')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Binary_iso ()
+{
 case "${LH_BINARY_IMAGES}" in
 	iso)
 		IMAGE="binary.iso"
@@ -33,7 +19,7 @@ case "${LH_BINARY_IMAGES}" in
 		;;
 
 	*)
-		exit 0
+		return
 		;;
 esac
 
@@ -44,12 +30,6 @@ Require_stagefile .stage/config .stage/bootstrap
 
 # Checking stage file
 Check_stagefile .stage/binary_iso
-
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
 
 # Checking depends
 Check_package chroot/usr/bin/genisoimage genisoimage
@@ -205,7 +185,7 @@ case "${LH_CHROOT_BUILD}" in
 		mv binary.sh chroot
 		mv binary chroot
 
-		Chroot chroot "sh binary.sh"
+		Chroot_target chroot "sh binary.sh"
 
 		# Move image
 		mv chroot/binary chroot/${IMAGE} ./
@@ -226,3 +206,4 @@ Remove_package
 
 # Creating stage file
 Create_stagefile .stage/binary_iso
+}

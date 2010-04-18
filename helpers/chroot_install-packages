@@ -7,22 +7,8 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'install queued packages into chroot')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Chroot_install_packages ()
+{
 Echo_message "Begin installing packages..."
 
 # Requiring stage file
@@ -30,12 +16,6 @@ Require_stagefile .stage/config .stage/bootstrap
 
 # Checking stage file
 Check_stagefile .stage/chroot_install-packages
-
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
 
 if [ -e chroot/root/chroot_packages ] && [ -s chroot/root/chroot_packages ]
 then
@@ -45,11 +25,11 @@ then
 	# Installing packages
 	case "${LH_APT}" in
 		apt|apt-get)
-			Chroot chroot "xargs --arg-file=/root/chroot_packages apt-get ${APT_OPTIONS} install"
+			Chroot_target chroot "xargs --arg-file=/root/chroot_packages apt-get ${APT_OPTIONS} install"
 			;;
 
 		aptitude)
-			Chroot chroot "xargs --arg-file=/root/chroot_packages aptitude ${APTITUDE_OPTIONS} install"
+			Chroot_target chroot "xargs --arg-file=/root/chroot_packages aptitude ${APTITUDE_OPTIONS} install"
 			;;
 	esac
 
@@ -63,3 +43,4 @@ fi
 
 # Creating stage file
 Create_stagefile .stage/chroot_install-packages
+}

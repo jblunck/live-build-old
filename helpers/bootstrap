@@ -7,28 +7,12 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'bootstrap a Debian system')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
-# Setup cleanup function
-Setup_cleanup
-
+Bootstrap ()
+{
 # Bootstrapping system
-lh bootstrap_cache restore ${*}
-lh bootstrap_copy ${*}
-lh bootstrap_cdebootstrap ${*}
-lh bootstrap_debootstrap ${*}
-lh bootstrap_cache save ${*}
+Bootstrap_cache restore ${@}
+Bootstrap_copy ${@}
+Bootstrap_cdebootstrap ${@}
+Bootstrap_debootstrap ${@}
+Bootstrap_cache save ${@}
+}

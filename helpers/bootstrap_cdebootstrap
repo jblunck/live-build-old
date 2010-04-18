@@ -7,25 +7,11 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'bootstrap a Debian system with cdebootstrap(1)')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Bootstrap_cdebootstrap ()
+{
 if [ "${LH_BOOTSTRAP}" != "cdebootstrap" ] && [ "${LH_BOOTSTRAP}" != "cdebootstrap-static" ]
 then
-	exit 0
+	return
 fi
 
 # Check architecture
@@ -36,17 +22,11 @@ Echo_message "Begin bootstrapping system..."
 Check_package /usr/bin/${LH_BOOTSTRAP} cdebootstrap
 
 # Ensure that a system is built as root
-lh testroot
+Testroot
 
 # Checking stage file
 Check_stagefile .stage/bootstrap
 Check_stagefile .stage/bootstrap_cache.restore
-
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
 
 # Creating chroot directory
 mkdir -p chroot
@@ -156,7 +136,7 @@ then
 	# Remove cdebootstrap-helper-diverts (needed at least for minimal flavours)
 	case "${LH_PACKAGES_LISTS}" in
 		stripped|minimal)
-			Chroot chroot "dpkg -P cdebootstrap-helper-diverts"
+			Chroot_target chroot "dpkg -P cdebootstrap-helper-diverts"
 			;;
 	esac
 
@@ -174,3 +154,4 @@ else
 	Echo_error "Can't process file /usr/bin/${LH_BOOTSTRAP} (FIXME)"
 	exit 1
 fi
+}

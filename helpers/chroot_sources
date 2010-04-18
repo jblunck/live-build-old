@@ -7,22 +7,8 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'manage /etc/apt/sources.list')"
-HELP=""
-USAGE="${PROGRAM} {install|remove} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Chroot_sources ()
+{
 # Requiring stage file
 Require_stagefile .stage/config .stage/bootstrap
 
@@ -34,12 +20,6 @@ case "${1}" in
 
 		# Checking stage file
 		Check_stagefile .stage/chroot_sources
-
-		# Checking lock file
-		Check_lockfile .lock
-
-		# Creating lock file
-		Create_lockfile .lock
 
 		# Configure custom sources.list
 		echo "deb ${LH_MIRROR_CHROOT} ${LH_DISTRIBUTION} ${LH_ARCHIVE_AREAS}" > chroot/etc/apt/sources.list
@@ -154,10 +134,10 @@ case "${1}" in
 						# Adding archive signing keys (chroot)
 						if [ -e "${PLACE}/${REPOSITORY}.chroot.gpg" ]
 						then
-							cat "${PLACE}/${REPOSITORY}.chroot.gpg" | Chroot chroot "apt-key add -"
+							cat "${PLACE}/${REPOSITORY}.chroot.gpg" | Chroot_target chroot "apt-key add -"
 						elif [ -e "${PLACE}/${REPOSITORY}.gpg" ]
 						then
-							cat "${PLACE}/${REPOSITORY}.gpg" | Chroot chroot "apt-key add -"
+							cat "${PLACE}/${REPOSITORY}.gpg" | Chroot_target chroot "apt-key add -"
 						fi
 					fi
 				done
@@ -193,7 +173,7 @@ case "${1}" in
 				# completed all the indices.
 				case "${LH_BOOTSTRAP_FLAVOUR}" in
 					stripped|minimal)
-						Chroot chroot "apt-get update"
+						Chroot_target chroot "apt-get update"
 						;;
 				esac
 
@@ -207,13 +187,13 @@ case "${1}" in
 				Install_package
 
 				# Generate Packages and Packages.gz 
-				echo "cd /root/local-packages && apt-ftparchive packages . > Packages" | Chroot chroot sh
+				echo "cd /root/local-packages && apt-ftparchive packages . > Packages" | Chroot_target chroot sh
 				gzip -9 -c chroot/root/local-packages/Packages > chroot/root/local-packages/Packages.gz
 
 				# Generate Release
 				echo "cd /root/local-packages && apt-ftparchive \
 					-o APT::FTPArchive::Release::Origin=chroot_local-packages \
-					release . > Release" | Chroot chroot sh
+					release . > Release" | Chroot_target chroot sh
 
 				if [ "${LH_APT_SECURE}" = "true" ]
 				then
@@ -246,7 +226,7 @@ case "${1}" in
 						      Expire-Date: 0
 						      %secring /root/local-package-keyring.sec
 						      %pubring /root/local-package-keyring.pub
-						      %commit" | Chroot chroot "gpg --batch --gen-key" || _LH_RET=${?}
+						      %commit" | Chroot_target chroot "gpg --batch --gen-key" || _LH_RET=${?}
 
 						case "${_LH_RET}" in
 							""|2)
@@ -256,7 +236,7 @@ case "${1}" in
 								;;
 							*)
 								Echo_error "GPG exited with error status %s" "${_LH_RET}"
-								exit ${_LH_RET}
+								return ${_LH_RET}
 								;;
 						esac
 
@@ -265,14 +245,14 @@ case "${1}" in
 					fi
 
 					# Sign release
-					Chroot chroot "gpg --no-default-keyring --secret-keyring /root/local-package-keyring.sec \
+					Chroot_target chroot "gpg --no-default-keyring --secret-keyring /root/local-package-keyring.sec \
 						--keyring /root/local-package-keyring.pub -abs -o \
 						/root/local-packages/Release.gpg /root/local-packages/Release"
 
 					# Import key
-					Chroot chroot "gpg --no-default-keyring --secret-keyring /root/local-package-keyring.sec \
+					Chroot_target chroot "gpg --no-default-keyring --secret-keyring /root/local-package-keyring.sec \
 						--keyring /root/local-package-keyring.pub --armor \
-						--export ${_LH_LOCAL_KEY_EMAIL}" | Chroot chroot "apt-key add -"
+						--export ${_LH_LOCAL_KEY_EMAIL}" | Chroot_target chroot "apt-key add -"
 
 					# Remove temporary keyrings
 					rm chroot/root/local-package-keyring.pub
@@ -341,7 +321,7 @@ case "${1}" in
 
 			if [ "${LH_APT}" = "aptitude" ] && [ ! -x /usr/bin/aptitude ]
 			then
-				Chroot chroot "apt-get ${APT_OPTIONS} install aptitude"
+				Chroot_target chroot "apt-get ${APT_OPTIONS} install aptitude"
 			fi
 		else # Get fresh indices
 			# Check local gpg keys
@@ -350,7 +330,7 @@ case "${1}" in
 				for FILE in config/chroot_sources/*.chroot.gpg
 				do
 					cp ${FILE} chroot/root
-					Chroot chroot "apt-key add /root/$(basename ${FILE})"
+					Chroot_target chroot "apt-key add /root/$(basename ${FILE})"
 					rm -f chroot/root/$(basename ${FILE})
 				done
 			fi
@@ -361,7 +341,7 @@ case "${1}" in
 				for PACKAGE in config/chroot_sources/*.deb
 				do
 					cp ${PACKAGE} chroot/root
-					Chroot chroot "dpkg -i /root/$(basename ${PACKAGE})"
+					Chroot_target chroot "dpkg -i /root/$(basename ${PACKAGE})"
 					rm -f chroot/root/$(basename ${PACKAGE})
 				done
 			fi
@@ -369,8 +349,8 @@ case "${1}" in
 			# Installing aptitude
 			if [ "${LH_APT}" = "aptitude" ] && [ ! -x /usr/bin/aptitude ]
 			then
-				Chroot chroot "apt-get ${APT_OPTIONS} update"
-				Chroot chroot "apt-get ${APT_OPTIONS} install aptitude"
+				Chroot_target chroot "apt-get ${APT_OPTIONS} update"
+				Chroot_target chroot "apt-get ${APT_OPTIONS} install aptitude"
 			fi
 
 			Apt update
@@ -380,7 +360,7 @@ case "${1}" in
 			# Installing keyring packages
 			if [ -n "${LH_KEYRING_PACKAGES}" ]
 			then
-				Chroot chroot "apt-get --yes --force-yes install ${LH_KEYRING_PACKAGES}"
+				Chroot_target chroot "apt-get --yes --force-yes install ${LH_KEYRING_PACKAGES}"
 				Apt update
 			fi
 
@@ -416,12 +396,6 @@ case "${1}" in
 	remove)
 		Echo_message "Deconfiguring file /etc/apt/sources.list"
 
-		# Checking lock file
-		Check_lockfile .lock
-
-		# Creating lock file
-		Create_lockfile .lock
-
 		# Configure generic indices
 		# Don't do anything if it's not required
 		if [ "${LH_MIRROR_CHROOT}" = "${LH_MIRROR_BINARY}" ] && \
@@ -431,7 +405,7 @@ case "${1}" in
 			# Removing stage file
 			rm -f .stage/chroot_sources
 
-			exit 0
+			return
 		fi
 
 		# Cleaning apt list cache
@@ -534,10 +508,10 @@ case "${1}" in
 						# Adding archive signing keys (binary)
 						if [ -e "${PLACE}/${REPOSITORY}.binary.gpg" ]
 						then
-							cat "${PLACE}/${REPOSITORY}.binary.gpg" | Chroot chroot "apt-key add -"
+							cat "${PLACE}/${REPOSITORY}.binary.gpg" | Chroot_target chroot "apt-key add -"
 						elif [ -e "${PLACE}/${REPOSITORY}.gpg" ]
 						then
-							cat "${PLACE}/${REPOSITORY}.gpg" | Chroot chroot "apt-key add -"
+							cat "${PLACE}/${REPOSITORY}.gpg" | Chroot_target chroot "apt-key add -"
 						fi
 					fi
 				done
@@ -569,7 +543,7 @@ case "${1}" in
 			for FILE in config/chroot_sources/*.binary.gpg
 			do
 				cp ${FILE} chroot/root
-				Chroot chroot "apt-key add /root/$(basename ${FILE})"
+				Chroot_target chroot "apt-key add /root/$(basename ${FILE})"
 				rm -f chroot/root/$(basename ${FILE})
 			done
 		fi
@@ -606,3 +580,4 @@ case "${1}" in
 		Usage
 		;;
 esac
+}

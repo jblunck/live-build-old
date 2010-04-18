@@ -7,22 +7,8 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'manage /usr/sbin/initctl')"
-HELP=""
-USAGE="${PROGRAM} {install|remove} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Chroot_upstart ()
+{
 # Requiring stage file
 Require_stagefile .stage/config .stage/bootstrap
 
@@ -32,12 +18,6 @@ case "${1}" in
 
 		# Checking stage file
 		Check_stagefile .stage/chroot_upstart
-
-		# Checking lock file
-		Check_lockfile .lock
-
-		# Creating lock file
-		Create_lockfile .lock
 
 		if [ -f chroot/usr/sbin/initctl ]
 		then
@@ -61,12 +41,6 @@ EOF
 	remove)
 		Echo_message "Deconfiguring file /usr/sbin/initctl"
 
-		# Checking lock file
-		Check_lockfile .lock
-
-		# Creating lock file
-		Create_lockfile .lock
-
 		if [ -f chroot/usr/sbin/initctl.orig ]
 		then
 			# Restore initctl file
@@ -84,3 +58,4 @@ EOF
 		Usage
 		;;
 esac
+}

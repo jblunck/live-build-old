@@ -7,48 +7,32 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'build source images')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Source ()
+{
 Require_stagefile .stage/chroot_install-packages
 
-# Setup cleanup function
-Setup_cleanup
-
 # Enabling network in chroot
-lh chroot_hosts install ${*}
-lh chroot_resolv install ${*}
-lh chroot_hostname install ${*}
-lh chroot_sources install ${*}
+Chroot_hosts install ${@}
+Chroot_resolv install ${@}
+Chroot_hostname install ${@}
+Chroot_sources install ${@}
 
 # Preparing images
-lh source_debian-live ${*}
-lh source_debian ${*}
-lh source_disk ${*}
-lh source_md5sum ${*}
+Source_debian-live ${@}
+Source_debian ${@}
+Source_disk ${@}
+Source_md5sum ${@}
 
 # Building images
-lh source_iso ${*}
-lh source_net ${*}
-lh source_tar ${*}
-lh source_usb ${*}
-lh source_virtual-hdd ${*}
+Source_iso ${@}
+Source_net ${@}
+Source_tar ${@}
+Source_usb ${@}
+Source_virtual-hdd ${@}
 
 # Deconfiguring chroot
 rm -f .stage/chroot_sources
-lh chroot_hostname remove ${*}
-lh chroot_resolv remove ${*}
-lh chroot_hosts remove ${*}
+Chroot_hostname remove ${@}
+Chroot_resolv remove ${@}
+Chroot_hosts remove ${@}
+}

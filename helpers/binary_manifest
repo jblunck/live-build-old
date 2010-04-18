@@ -7,25 +7,11 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'create manifest')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Binary_manifest ()
+{
 if [ "${LH_BINARY_IMAGES}" = "virtual-hdd" ]
 then
-	exit 0
+	return
 fi
 
 Echo_message "Begin creating manifest..."
@@ -36,18 +22,12 @@ Require_stagefile .stage/config .stage/bootstrap
 # Checking stage file
 Check_stagefile .stage/binary_manifest
 
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
-
 case "${LH_INITRAMFS}" in
 	casper)
 		INITFS="casper"
 
 		# Add filesystem.manifest
-		Chroot chroot "dpkg --get-selections" | awk '{ print $1 }' | sort -u > binary/casper/filesystem.manifest
+		Chroot_target chroot "dpkg --get-selections" | awk '{ print $1 }' | sort -u > binary/casper/filesystem.manifest
 		;;
 
 	live-initramfs)
@@ -62,9 +42,10 @@ This file contains the list of all packages installed in this live system.
 
 EOF
 
-Chroot chroot "dpkg -l" >> binary/${INITFS}/packages.txt
+Chroot_target chroot "dpkg -l" >> binary/${INITFS}/packages.txt
 
 cp binary/${INITFS}/packages.txt binary.packages
 
 # Creating stage file
 Create_stagefile .stage/binary_manifest
+}

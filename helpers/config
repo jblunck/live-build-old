@@ -7,11 +7,8 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
+Config ()
+{
 # Read meta config
 if [ "${1}" != "noauto" ] && [ -x auto/config ]
 then
@@ -1349,3 +1346,4 @@ Check_defaults
 
 # Creating stage file
 Create_stagefile .stage/config
+}

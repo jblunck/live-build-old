@@ -7,74 +7,61 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'customize the Debian system')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Chroot ()
+{
 # Setup cleanup function
 Setup_cleanup
 
 # Configuring chroot
-lh chroot_cache restore ${*}
-lh chroot_devpts install ${*}
-lh chroot_proc install ${*}
-lh chroot_selinuxfs install ${*}
-lh chroot_sysfs install ${*}
-lh chroot_debianchroot install ${*}
-lh chroot_dpkg install ${*}
-lh chroot_sysv-rc install ${*}
-lh chroot_upstart install ${*}
-lh chroot_hosts install ${*}
-lh chroot_resolv install ${*}
-lh chroot_hostname install ${*}
-lh chroot_apt install ${*}
-lh chroot_sources install ${*}
-lh chroot_linux-image install ${*}
+Chroot_cache restore ${@}
+Chroot_devpts install ${@}
+Chroot_proc install ${@}
+Chroot_selinuxfs install ${@}
+Chroot_sysfs install ${@}
+Chroot_debianchroot install ${@}
+Chroot_dpkg install ${@}
+Chroot_sysv_rc install ${@}
+Chroot_upstart install ${@}
+Chroot_hosts install ${@}
+Chroot_resolv install ${@}
+Chroot_hostname install ${@}
+Chroot_apt install ${@}
+Chroot_sources install ${@}
+Chroot_linux_image install ${@}
 
 # Customizing chroot
-lh chroot_preseed ${*}
-lh chroot_local-preseed ${*}
-lh chroot_tasks ${*}
-lh chroot_packageslists ${*}
-lh chroot_local-packageslists ${*}
-lh chroot_packages ${*}
-lh chroot_local-packages ${*}
-lh chroot_install-packages ${*}
-lh chroot_localization ${*}
-lh chroot_local-includes ${*}
-lh chroot_local-patches ${*}
-lh chroot_sysvinit ${*}
-lh chroot_local-hooks ${*}
-lh chroot_hooks ${*}
-lh chroot_symlinks ${*}
-lh chroot_hacks ${*}
-lh chroot_interactive ${*}
+Chroot_preseed ${@}
+Chroot_local_preseed ${@}
+Chroot_tasks ${@}
+Chroot_packageslists ${@}
+Chroot_local_packageslists ${@}
+Chroot_packages ${@}
+Chroot_local_packages ${@}
+Chroot_install_packages ${@}
+Chroot_localization ${@}
+Chroot_local_includes ${@}
+Chroot_local_patches ${@}
+Chroot_sysvinit ${@}
+Chroot_local_hooks ${@}
+Chroot_hooks ${@}
+Chroot_symlinks ${@}
+Chroot_hacks ${@}
+Chroot_interactive ${@}
 
 # Deconfiguring chroot
-lh chroot_linux-image remove ${*}
-lh chroot_sources remove ${*}
-lh chroot_apt remove ${*}
-lh chroot_hostname remove ${*}
-lh chroot_resolv remove ${*}
-lh chroot_hosts remove ${*}
-lh chroot_sysv-rc remove ${*}
-lh chroot_upstart remove ${*}
-lh chroot_dpkg remove ${*}
-lh chroot_debianchroot remove ${*}
-lh chroot_sysfs remove ${*}
-lh chroot_selinuxfs remove ${*}
-lh chroot_proc remove ${*}
-lh chroot_devpts remove ${*}
-lh chroot_cache save ${*}
+Chroot_linux_image remove ${@}
+Chroot_sources remove ${@}
+Chroot_apt remove ${@}
+Chroot_hostname remove ${@}
+Chroot_resolv remove ${@}
+Chroot_hosts remove ${@}
+Chroot_sysv_rc remove ${@}
+Chroot_upstart remove ${@}
+Chroot_dpkg remove ${@}
+Chroot_debianchroot remove ${@}
+Chroot_sysfs remove ${@}
+Chroot_selinuxfs remove ${@}
+Chroot_proc remove ${@}
+Chroot_devpts remove ${@}
+Chroot_cache save ${@}
+}

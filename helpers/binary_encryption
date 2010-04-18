@@ -7,32 +7,18 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'encrypts rootfs')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Binary_encryption ()
+{
 if [ "${LH_BINARY_IMAGES}" = "virtual-hdd" ]
 then
-	exit 0
+	return
 fi
 
 case "${LH_ENCRYPTION}" in
 	aes128|aes192|aes256)
 		;;
 	""|false)
-		exit 0
+		return
 		;;
 	*)
 		Echo_error "Encryption type %s not supported." "${LH_ENCRYPTION}"
@@ -57,12 +43,6 @@ Require_stagefile .stage/config .stage/bootstrap .stage/binary_rootfs
 
 # Checking stage file
 Check_stagefile .stage/binary_encryption
-
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
 
 case "${LH_INITRAMFS}" in
 	casper)
@@ -102,7 +82,7 @@ do
 
 	case "${LH_CHROOT_BUILD}" in
 		true)
-			if Chroot chroot aespipe -e ${LH_ENCRYPTION} -T \
+			if Chroot_target chroot aespipe -e ${LH_ENCRYPTION} -T \
 				< chroot/filesystem.${LH_CHROOT_FILESYSTEM} \
 				> chroot/filesystem.${LH_CHROOT_FILESYSTEM}.tmp
 			then
@@ -130,7 +110,7 @@ do
 		break
 	fi
 done
-	
+
 # Cleanup temporary filesystems
 rm -f chroot/filesystem.${LH_CHROOT_FILESYSTEM}
 rm -f chroot/filesystem.${LH_CHROOT_FILESYSTEM}.tmp
@@ -144,3 +124,4 @@ Remove_package
 
 # Creating stage file
 Create_stagefile .stage/binary_encryption
+}

@@ -7,27 +7,13 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'install disk information into binary')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Binary_disk ()
+{
 case "${LH_BINARY_IMAGES}" in
 	iso*)
 		;;
 	*)
-		exit 0
+		return
 		;;
 esac
 
@@ -38,12 +24,6 @@ Require_stagefile .stage/config .stage/bootstrap
 
 # Checking stage file
 Check_stagefile .stage/binary_disk
-
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
 
 mkdir -p binary/.disk
 
@@ -135,3 +115,4 @@ esac
 
 # Creating stage file
 Create_stagefile .stage/binary_disk
+}

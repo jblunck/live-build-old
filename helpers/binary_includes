@@ -7,25 +7,11 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'copy files into binary')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Binary_includes ()
+{
 if [ "${LH_INCLUDES}" = "none" ]
 then
-	exit 0
+	return
 fi
 
 Echo_message "Begin copying binary includes..."
@@ -35,12 +21,6 @@ Require_stagefile .stage/config .stage/bootstrap
 
 # Checking stage file
 Check_stagefile .stage/binary_includes
-
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
 
 # Check user includes
 if [ ! -d "${LH_INCLUDES}" ]
@@ -165,3 +145,4 @@ fi
 
 # Creating stage file
 Create_stagefile .stage/binary_includes
+}

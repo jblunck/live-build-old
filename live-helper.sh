@@ -8,6 +8,12 @@ do
 	. "${FUNCTION}"
 done
 
+# Source global helpers
+for HELPER in "${LH_BASE}"/helpers/*
+do
+	. "${HELPER}"
+done
+
 # Source local functions
 if ls auto/functions/* > /dev/null 2>&1
 then

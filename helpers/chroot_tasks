@@ -7,22 +7,8 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'install tasks into chroot')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Chroot_tasks ()
+{
 Echo_message "Begin installing tasks..."
 
 # Requiring stage file
@@ -30,12 +16,6 @@ Require_stagefile .stage/config .stage/bootstrap
 
 # Checking stage file
 Check_stagefile .stage/chroot_tasks
-
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
 
 if [ -n "${LH_TASKS}" ] && [ "${LH_TASKS}" != "none" ]
 then
@@ -59,13 +39,13 @@ then
 	# Installing tasks
 	case "${LH_TASKSEL}" in
 		aptitude)
-			Chroot chroot "aptitude ${APTITUDE_OPTIONS} install ${LH_TASKS}"
+			Chroot_target chroot "aptitude ${APTITUDE_OPTIONS} install ${LH_TASKS}"
 			;;
 
 		tasksel)
 			for TASK in ${LH_TASKS}
 			do
-				Chroot chroot "tasksel --debconf-apt-progress --logstderr install ${TASK}"
+				Chroot_target chroot "tasksel --debconf-apt-progress --logstderr install ${TASK}"
 			done
 			;;
 	esac
@@ -79,3 +59,4 @@ then
 	# Creating stage file
 	Create_stagefile .stage/chroot_tasks
 fi
+}

@@ -7,25 +7,11 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'installs yaboot into binary')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Binary_yaboot ()
+{
 if [ "${LH_BOOTLOADER}" != "yaboot" ]
 then
-	exit 0
+	return
 fi
 
 Echo_message "Begin installing yaboot..."
@@ -39,12 +25,6 @@ Check_stagefile .stage/binary_yaboot
 # Checking yaboot templates
 Check_templates yaboot
 
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
-
 # Check architecture
 Check_architecture powerpc ppc64
 Check_crossarchitecture
@@ -57,71 +37,6 @@ Restore_cache cache/packages_binary
 
 # Installing depends
 Install_package
-
-# Local functions
-Yaboot_live_entry ()
-{
-	LABEL="${1}"
-	KERNEL="${2}"
-	INITRD="${3}"
-	APPEND="${4}"
-
-	DIRECTORY="/$(basename ${DESTDIR_LIVE})"
-
-	LINUX_LIVE="${LINUX_LIVE}\nimage=${DIRECTORY}/${KERNEL}\n"
-	LINUX_LIVE="${LINUX_LIVE}\tlabel=${LABEL}\n"
-	LINUX_LIVE="${LINUX_LIVE}\tinitrd=${DIRECTORY}/${INITRD}\n"
-	LINUX_LIVE="${LINUX_LIVE}\tappend=\"boot=${INITFS} LH_BOOTAPPEND_LIVE ${APPEND}\"\n"
-	LINUX_LIVE="${LINUX_LIVE}\tinitrd-size=10240\n"
-}
-
-Yaboot_install_entry ()
-{
-	LABEL="${1}"
-	KERNEL="${2}"
-	INITRD="${3}"
-	APPEND="${4}"
-
-	DIRECTORY="/$(basename ${DESTDIR_INSTALL})"
-
-	QAPPEND="quiet"
-
-	for TYPE in Install Expert Rescue Auto
-	do
-		case "${TYPE}" in
-			Install)
-				TAPPEND="${APPEND} ${QAPPEND}"
-				;;
-
-			Expert)
-				TAPPEND="priority=low ${APPEND}"
-				;;
-
-			Rescue)
-				TAPPEND="rescue/enable=true ${APPEND} ${QAPPEND}"
-				;;
-
-			Auto)
-				TAPPEND="auto=true priority=critical ${APPEND} ${QAPPEND}"
-				;;
-		esac
-
-		case "${LABEL}" in
-			Text)
-				TYPE_SUFFIX=""
-				;;
-			GUI)
-				TYPE_SUFFIX="gui"
-				;;
-		esac
-
-		LINUX_INSTALL="${LINUX_INSTALL}\nimage=${DIRECTORY}/${KERNEL}\n"
-		LINUX_INSTALL="${LINUX_INSTALL}\tlabel=${TYPE}${TYPE_SUFFIX}\n"
-		LINUX_INSTALL="${LINUX_INSTALL}\tinitrd=${DIRECTORY}/${INITRD}\n"
-		LINUX_INSTALL="${LINUX_INSTALL}\tappend=\"${TAPPEND} ${LH_BOOTAPPEND_INSTALL}\"\n"
-		LINUX_INSTALL="${LINUX_INSTALL}\tinitrd-size=10240\n"
-	done
-}
 
 case "${LH_INITRAMFS}" in
 	casper)
@@ -312,3 +227,68 @@ Remove_package
 
 # Creating stage file
 Create_stagefile .stage/binary_yaboot
+}
+
+Yaboot_live_entry ()
+{
+	LABEL="${1}"
+	KERNEL="${2}"
+	INITRD="${3}"
+	APPEND="${4}"
+
+	DIRECTORY="/$(basename ${DESTDIR_LIVE})"
+
+	LINUX_LIVE="${LINUX_LIVE}\nimage=${DIRECTORY}/${KERNEL}\n"
+	LINUX_LIVE="${LINUX_LIVE}\tlabel=${LABEL}\n"
+	LINUX_LIVE="${LINUX_LIVE}\tinitrd=${DIRECTORY}/${INITRD}\n"
+	LINUX_LIVE="${LINUX_LIVE}\tappend=\"boot=${INITFS} LH_BOOTAPPEND_LIVE ${APPEND}\"\n"
+	LINUX_LIVE="${LINUX_LIVE}\tinitrd-size=10240\n"
+}
+
+Yaboot_install_entry ()
+{
+	LABEL="${1}"
+	KERNEL="${2}"
+	INITRD="${3}"
+	APPEND="${4}"
+
+	DIRECTORY="/$(basename ${DESTDIR_INSTALL})"
+
+	QAPPEND="quiet"
+
+	for TYPE in Install Expert Rescue Auto
+	do
+		case "${TYPE}" in
+			Install)
+				TAPPEND="${APPEND} ${QAPPEND}"
+				;;
+
+			Expert)
+				TAPPEND="priority=low ${APPEND}"
+				;;
+
+			Rescue)
+				TAPPEND="rescue/enable=true ${APPEND} ${QAPPEND}"
+				;;
+
+			Auto)
+				TAPPEND="auto=true priority=critical ${APPEND} ${QAPPEND}"
+				;;
+		esac
+
+		case "${LABEL}" in
+			Text)
+				TYPE_SUFFIX=""
+				;;
+			GUI)
+				TYPE_SUFFIX="gui"
+				;;
+		esac
+
+		LINUX_INSTALL="${LINUX_INSTALL}\nimage=${DIRECTORY}/${KERNEL}\n"
+		LINUX_INSTALL="${LINUX_INSTALL}\tlabel=${TYPE}${TYPE_SUFFIX}\n"
+		LINUX_INSTALL="${LINUX_INSTALL}\tinitrd=${DIRECTORY}/${INITRD}\n"
+		LINUX_INSTALL="${LINUX_INSTALL}\tappend=\"${TAPPEND} ${LH_BOOTAPPEND_INSTALL}\"\n"
+		LINUX_INSTALL="${LINUX_INSTALL}\tinitrd-size=10240\n"
+	done
+}

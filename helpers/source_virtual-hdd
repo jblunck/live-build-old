@@ -7,30 +7,16 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'build source image')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Source_virtual_hdd ()
+{
 if [ "${LH_SOURCE}" != "true" ]
 then
-	exit 0
+	return
 fi
 
 if ! In_list virtual-hdd "${LH_SOURCE_IMAGES}"
 then
-	exit 0
+	return
 fi
 
 Echo_message "Begin building source virtual-hdd image..."
@@ -40,12 +26,6 @@ Require_stagefile .stage/config .stage/source_debian
 
 # Checking stage file
 Check_stagefile .stage/source_virtual-hdd
-
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
 
 if [ "${LH_CHROOT_BUILD}" = "true" ]
 then
@@ -76,11 +56,11 @@ then
 
 	case "${LH_BINARY_FILESYSTEM}" in
 		ext2)
-			Chroot chroot "mkfs.ext2 -F -m 0 source-virtual.img"
+			Chroot_target chroot "mkfs.ext2 -F -m 0 source-virtual.img"
 			;;
 
 		ext3)
-			Chroot chroot "mkfs.ext3 -F source-virtual.img"
+			Chroot_target chroot "mkfs.ext3 -F source-virtual.img"
 			;;
 	esac
 
@@ -112,3 +92,4 @@ Remove_package
 
 # Creating stage file
 Create_stagefile .stage/source_virtual-hdd
+}

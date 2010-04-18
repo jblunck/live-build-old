@@ -7,22 +7,8 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'manage /sbin/dpkg')"
-HELP=""
-USAGE="${PROGRAM} {install|remove} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Chroot_dpkg ()
+{
 # Requiring stage file
 Require_stagefile .stage/config .stage/bootstrap
 
@@ -32,12 +18,6 @@ case "${1}" in
 
 		# Checking stage file
 		Check_stagefile .stage/chroot_dpkg
-
-		# Checking lock file
-		Check_lockfile .lock
-
-		# Creating lock file
-		Create_lockfile .lock
 
 		# Save start-stop-daemon program
 		mv chroot/sbin/start-stop-daemon chroot/sbin/start-stop-daemon.orig
@@ -70,12 +50,6 @@ EOF
 	remove)
 		Echo_message "Deconfiguring file /sbin/start-stop-daemon"
 
-		# Checking lock file
-		Check_lockfile .lock
-
-		# Creating lock file
-		Create_lockfile .lock
-
 		# Manual hacks for special packages
 
 		# samhain
@@ -102,3 +76,4 @@ EOF
 		Usage
 		;;
 esac
+}

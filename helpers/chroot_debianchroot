@@ -7,22 +7,8 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'manage /etc/debian_chroot')"
-HELP=""
-USAGE="${PROGRAM} {install|remove} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Chroot_debianchroot ()
+{
 # Requiring stage file
 Require_stagefile .stage/config .stage/bootstrap
 
@@ -32,12 +18,6 @@ case "${1}" in
 
 		# Checking stage file
 		Check_stagefile .stage/chroot_debianchroot
-
-		# Checking lock file
-		Check_lockfile .lock
-
-		# Creating lock file
-		Create_lockfile .lock
 
 		if [ -f chroot/etc/debian_chroot ]
 		then
@@ -54,12 +34,6 @@ case "${1}" in
 
 	remove)
 		Echo_message "Deconfiguring file /etc/debian_chroot"
-
-		# Checking lock file
-		Check_lockfile .lock
-
-		# Creating lock file
-		Create_lockfile .lock
 
 		if [ -f chroot/etc/debian_chroot.orig ]
 		then
@@ -78,3 +52,4 @@ case "${1}" in
 		Usage
 		;;
 esac
+}

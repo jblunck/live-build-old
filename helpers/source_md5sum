@@ -7,30 +7,16 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'create source md5sums')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Source_md5sum ()
+{
 if [ "${LH_SOURCE}" != "true" ]
 then
-	exit 0
+	return
 fi
 
 if [ "${LH_CHECKSUMS}" != "true" ]
 then
-	exit 0
+	return
 fi
 
 Echo_message "Begin creating source md5sum.txt..."
@@ -40,12 +26,6 @@ Require_stagefile .stage/config .stage/source_debian
 
 # Checking stage file
 Check_stagefile .stage/source_md5sum
-
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
 
 # Remove old md5sums
 if [ -f source/md5sum.txt ]
@@ -76,3 +56,4 @@ cd "${OLDPWD}"
 
 # Creating stage file
 Create_stagefile .stage/source_md5sum
+}

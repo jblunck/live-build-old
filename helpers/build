@@ -7,11 +7,8 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
+Build ()
+{
 # Automatically populating config tree
 if [ -x auto/config ] && [ ! -e .stage/config ]
 then
@@ -55,21 +52,15 @@ then
 	exit 1
 fi
 
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
-# Checking defaults
-Check_defaults
-
 # Bootstrapping system
-lh bootstrap ${*}
+Bootstrap ${*}
 
 # Customizing chroot
-lh chroot ${*}
+Chroot ${*}
 
 # Building binary images
-lh binary ${*}
+Binary ${*}
 
 # Building source images
-lh source ${*}
+Source ${*}
+}

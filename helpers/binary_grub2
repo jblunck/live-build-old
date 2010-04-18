@@ -7,25 +7,11 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'installs grub2 into binary')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Binary_grub ()
+{
 if [ "${LH_BOOTLOADER}" != "grub2" ]
 then
-	exit 0
+	return
 fi
 
 Echo_message "Begin installing grub2..."
@@ -39,12 +25,6 @@ Check_stagefile .stage/binary_grub
 # Checking grub2 templates
 Check_templates grub2
 
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
-
 # Check architecture
 Check_architecture amd64 i386
 Check_crossarchitecture
@@ -57,38 +37,6 @@ Restore_cache cache/packages_binary
 
 # Installing depends
 Install_package
-
-# Local functions
-Grub_live_entry ()
-{
-	LABEL="${1}"
-	KERNEL="${2}"
-	INITRD="${3}"
-	APPEND="${4}"
-
-	LINUX_LIVE="${LINUX_LIVE}\nmenuentry \"Debian GNU/Linux - ${LABEL}\" {"
-	LINUX_LIVE="${LINUX_LIVE}\nlinux\t\t/${KERNEL} boot=${INITFS} LH_BOOTAPPEND_LIVE ${APPEND}"
-	LINUX_LIVE="${LINUX_LIVE}\ninitrd\t\t/${INITRD}"
-	LINUX_LIVE="${LINUX_LIVE}\n}"
-}
-
-Grub_install_entry ()
-{
-	LABEL="${1}"
-	KERNEL="${2}"
-	INITRD="${3}"
-	APPEND="${4}"
-
-	if [ "${LABEL}" != "rescue" ] && [ "${LABEL}" != "rescuegui" ]
-	then
-		APPEND="${APPEND} quiet"
-	fi
-
-	LINUX_INSTALL="${LINUX_INSTALL}\nmenuentry \"Debian GNU/Linux - ${LABEL}\" {"
-	LINUX_INSTALL="${LINUX_INSTALL}\nlinux\t\t/${KERNEL} ${APPEND} LH_BOOTAPPEND_INSTALL"
-	LINUX_INSTALL="${LINUX_INSTALL}\ninitrd\t\t/${INITRD}"
-	LINUX_INSTALL="${LINUX_INSTALL}\n}"
-}
 
 case "${LH_INITRAMFS}" in
 	casper)
@@ -307,3 +255,35 @@ Remove_package
 
 # Creating stage file
 Create_stagefile .stage/binary_grub
+}
+
+Grub_live_entry ()
+{
+	LABEL="${1}"
+	KERNEL="${2}"
+	INITRD="${3}"
+	APPEND="${4}"
+
+	LINUX_LIVE="${LINUX_LIVE}\nmenuentry \"Debian GNU/Linux - ${LABEL}\" {"
+	LINUX_LIVE="${LINUX_LIVE}\nlinux\t\t/${KERNEL} boot=${INITFS} LH_BOOTAPPEND_LIVE ${APPEND}"
+	LINUX_LIVE="${LINUX_LIVE}\ninitrd\t\t/${INITRD}"
+	LINUX_LIVE="${LINUX_LIVE}\n}"
+}
+
+Grub_install_entry ()
+{
+	LABEL="${1}"
+	KERNEL="${2}"
+	INITRD="${3}"
+	APPEND="${4}"
+
+	if [ "${LABEL}" != "rescue" ] && [ "${LABEL}" != "rescuegui" ]
+	then
+		APPEND="${APPEND} quiet"
+	fi
+
+	LINUX_INSTALL="${LINUX_INSTALL}\nmenuentry \"Debian GNU/Linux - ${LABEL}\" {"
+	LINUX_INSTALL="${LINUX_INSTALL}\nlinux\t\t/${KERNEL} ${APPEND} LH_BOOTAPPEND_INSTALL"
+	LINUX_INSTALL="${LINUX_INSTALL}\ninitrd\t\t/${INITRD}"
+	LINUX_INSTALL="${LINUX_INSTALL}\n}"
+}

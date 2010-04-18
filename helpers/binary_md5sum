@@ -7,25 +7,11 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'create binary md5sums')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Binary_md5sum ()
+{
 if [ "${LH_CHECKSUMS}" != "true" ] || [ "${LH_BINARY_IMAGES}" = "virtual-hdd" ]
 then
-	exit 0
+	return
 fi
 
 Echo_message "Begin creating binary md5sum.txt..."
@@ -35,12 +21,6 @@ Require_stagefile .stage/config .stage/bootstrap
 
 # Checking stage file
 Check_stagefile .stage/binary_md5sum
-
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
 
 # Remove old md5sums
 if [ -f binary/md5sum.txt ]
@@ -71,3 +51,4 @@ cd "${OLDPWD}"
 
 # Creating stage file
 Create_stagefile .stage/binary_md5sum
+}

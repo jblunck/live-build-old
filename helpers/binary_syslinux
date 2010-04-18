@@ -7,25 +7,11 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions; see COPYING for details.
 
-set -e
-
-# Including common functions
-. "${LH_BASE:-/usr/share/live-helper}"/live-helper.sh
-
-# Setting static variables
-DESCRIPTION="$(Echo 'installs syslinux into binary')"
-HELP=""
-USAGE="${PROGRAM} [--force]"
-
-Arguments "${@}"
-
-# Reading configuration files
-Read_conffiles config/all config/common config/bootstrap config/chroot config/binary config/source
-Set_defaults
-
+Binary_syslinux ()
+{
 if [ "${LH_BOOTLOADER}" != "syslinux" ]
 then
-	exit 0
+	return
 fi
 
 Echo_message "Begin installing syslinux..."
@@ -39,12 +25,6 @@ Check_stagefile .stage/binary_syslinux
 # Checking syslinux templates
 Check_templates syslinux
 
-# Checking lock file
-Check_lockfile .lock
-
-# Creating lock file
-Create_lockfile .lock
-
 # Check architecture
 Check_architecture amd64 i386
 Check_crossarchitecture
@@ -57,298 +37,6 @@ Restore_cache cache/packages_binary
 
 # Installing depends
 Install_package
-
-# Local functions
-Utf8_to_latin1 ()
-{
-	VALUE="${1}"
-
-	echo "${VALUE}" | iconv -f utf-8 -t latin1
-}
-
-Syslinux_memtest_entry ()
-{
-	LABEL="${1}"
-	MENULABEL="$(Utf8_to_latin1 "${2}")"
-	KERNEL="${3}"
-
-	MEMTEST="${MEMTEST}\nlabel ${LABEL}\n"
-
-	# Write the menu label if the syslinux menu is being use
-	MEMTEST="${MEMTEST}\tmenu label ${MENULABEL}\n"
-	MEMTEST="${MEMTEST}\tkernel ${LIVE_KERNEL_PATH}/${KERNEL}\n"
-	MEMTEST="$(/bin/echo ${MEMTEST} | sed -e 's|//|/|g')"
-}
-
-Syslinux_live_entry ()
-{
-	LABEL="${1}"
-	MENULABEL="$(Utf8_to_latin1 "${2}")"
-	MENULABEL="${2}"
-	KERNEL="${3}"
-	INITRD="${4}"
-	APPEND="${5}"
-
-	case "${LH_BINARY_IMAGES}" in
-		iso*|usb*)
-			NUMBER="$(ls -1 ${KERNEL_PATH} | grep 'vmlinuz[0-9]\+$' | wc -l)"
-			NUMBER="$((${NUMBER} +1))"
-
-			# Do not add numbering to filenames if first kernel/initrd
-			if [ "${NUMBER}" = "1" ]
-			then
-				NUMBER=""
-			fi
-
-			# Note: ISOLINUX will not find the kernel if the name ends in ".img".
-			if [ -e ${KERNEL_PATH}/${KERNEL} ]
-			then
-				mv ${KERNEL_PATH}/${KERNEL} ${KERNEL_PATH}/vmlinuz${NUMBER}
-			fi
-
-			if [ -e ${KERNEL_PATH}/${INITRD} ]
-			then
-				mv ${KERNEL_PATH}/${INITRD} ${KERNEL_PATH}/initrd${NUMBER}.img
-			fi
-
-			KERNEL=vmlinuz${NUMBER}
-			INITRD=initrd${NUMBER}.img
-		;;
-	esac
-
-	# Regular kernel
-	LINUX_LIVE="${LINUX_LIVE}\nlabel ${LABEL}\n"
-
-	# Write the menu label if the syslinux menu is being use
-	if [ -n "${MENULABEL}" ]
-	then
-		LINUX_LIVE="${LINUX_LIVE}\tmenu label ${MENULABEL}\n"
-	fi
-
-	LINUX_LIVE="${LINUX_LIVE}\tkernel ${LIVE_KERNEL_PATH}/${KERNEL}\n"
-	LINUX_LIVE="${LINUX_LIVE}\tappend initrd=${LIVE_KERNEL_PATH}/${INITRD} boot=${INITFS} ${LH_BOOTAPPEND_LIVE} ${APPEND}\n"
-
-	# Failsafe kernel
-	LINUX_LIVE="${LINUX_LIVE}\nlabel ${LABEL}failsafe\n"
-
-	# Write the menu label if the syslinux menu is being use
-	if [ -n "${MENULABEL}" ]
-	then
-		LINUX_LIVE="${LINUX_LIVE}\tmenu label ${MENULABEL} (failsafe)\n"
-	fi
-
-	LINUX_LIVE="${LINUX_LIVE}\tkernel ${LIVE_KERNEL_PATH}/${KERNEL}\n"
-	LINUX_LIVE="${LINUX_LIVE}\tappend initrd=${LIVE_KERNEL_PATH}/${INITRD} boot=${INITFS} ${LH_BOOTAPPEND_LIVE} ${APPEND} ${FAILSAFE}\n"
-}
-
-Syslinux_install_entry ()
-{
-	LABEL="${1}"
-	KERNEL="${2}"
-	INITRD="${3}"
-	APPEND="${4}"
-
-	# Boot in quiet mode where appropriate
-	QAPPEND="quiet"
-
-	for TYPE in Install Expert Rescue Auto
-	do
-		case "${TYPE}" in
-			Install)
-				TAPPEND="${APPEND} ${QAPPEND}"
-				;;
-
-			Expert)
-				TAPPEND="priority=low ${APPEND}"
-				;;
-
-			Rescue)
-				TAPPEND="rescue/enable=true ${APPEND} ${QAPPEND}"
-				;;
-
-			Auto)
-				TAPPEND="auto=true priority=critical ${APPEND} ${QAPPEND}"
-				;;
-		esac
-
-		case "${LABEL}" in
-			Text)
-				TYPE_SUFFIX=""
-				;;
-			GUI)
-				TYPE_SUFFIX="gui"
-				;;
-		esac
-
-		LINUX_INSTALL="${LINUX_INSTALL}\nlabel $(echo "${TYPE}" | tr A-Z a-z)${TYPE_SUFFIX}\n"
-		LINUX_INSTALL="${LINUX_INSTALL}\tmenu label ${LABEL} ${TYPE}\n"
-		LINUX_INSTALL="${LINUX_INSTALL}\tkernel ${LIVE_INSTALL_KERNEL_PATH}/${KERNEL}\n"
-		LINUX_INSTALL="${LINUX_INSTALL}\tappend initrd=${LIVE_INSTALL_KERNEL_PATH}/${INITRD} ${TAPPEND} ${LH_BOOTAPPEND_INSTALL}\n"
-	done
-}
-
-Copy_syslinux_templates ()
-{
-	cp -r "${TEMPLATES}"/common/* ${SCREEN_PATH}
-
-	if [ "${LH_SYSLINUX_MENU}" = "false" ]
-	then
-		cp "${TEMPLATES}"/normal/* ${SCREEN_PATH}
-	else
-		cp "${TEMPLATES}"/menu/* ${SCREEN_PATH}
-
-		case "${LH_SYSLINUX_MENU}" in
-			gfxboot)
-				MENUMODULE="gfxboot.c32"
-				;;
-
-			menu)
-				MENUMODULE="menu.c32"
-				;;
-
-			vesamenu)
-				MENUMODULE="vesamenu.c32"
-				;;
-
-			*)
-				if [ -z "${LH_SYSLINUX_CFG}" ]
-				then
-					MENUMODULE=$(grep 'menu.c32' ${TEMPLATES}/menu/syslinux.cfg | sed 's|default\s*.*/\(.*menu.c32\)$|\1|g')
-				else
-					LH_SYSLINUX_CFG="${LH_SYSLINUX_CFG:-${TEMPLATES}/menu/syslinux.cfg}"
-				fi
-				;;
-		esac
-
-		case "${LH_CHROOT_BUILD}" in
-			true)
-				cp chroot/usr/lib/syslinux/"${MENUMODULE}" ${DATA_PATH}
-				;;
-			false)
-				cp /usr/lib/syslinux/"${MENUMODULE}" ${DATA_PATH}
-				;;
-		esac
-	fi
-
-	if ls "${TEMPLATES}/${LH_LANGUAGE}"/* > /dev/null 2>&1
-	then
-		cp -r "${TEMPLATES}"/"${LH_LANGUAGE}"/* ${SCREEN_PATH}
-	else
-		if ls "${TEMPLATES}"/en/* > /dev/null 2>&1
-		then
-			cp -r "${TEMPLATES}"/en/* ${SCREEN_PATH}
-		fi
-	fi
-
-	if ls ${SCREEN_PATH}/*.live > /dev/null 2>&1
-	then
-		for FILE in ${SCREEN_PATH}/*.live
-		do
-			mv ${FILE} $(dirname ${FILE})/$(basename ${FILE} .live)
-		done
-	fi
-
-	if [ "${LH_DEBIAN_INSTALLER}" != "false" ]
-	then
-		if ls ${SCREEN_PATH}/*.install > /dev/null 2>&1
-		then
-			for FILE in ${SCREEN_PATH}/*.install
-			do
-				mv ${FILE} $(dirname ${FILE})/$(basename ${FILE} .install)
-			done
-		fi
-
-		case "${LH_ARCHITECTURE}" in
-			amd64|i386|powerpc)
-				if ls ${SCREEN_PATH}/*.install.g-i > /dev/null 2>&1
-				then
-					for FILE in ${SCREEN_PATH}/*.install.g-i
-					do
-						mv ${FILE} $(dirname ${FILE})/$(basename ${FILE} .install.g-i)
-					done
-				fi
-				;;
-
-			*)
-				rm -f ${SCREEN_PATH}/*.install.g-i
-				;;
-		esac
-	else
-		rm -f ${SCREEN_PATH}/*.install*
-	fi
-
-	if [ "${LH_SYSLINUX_MENU}" != "false" ]
-	then
-		rm -f ${DATA_PATH}/boot.txt
-	fi
-
-	# Copying custom splash screen
-	if [ "${LH_SYSLINUX_SPLASH}" = "none" ]
-	then
-		# no splash screen
-		SPLASH=""
-		rm -f ${SCREEN_PATH}/splash.rle
-		rm -f ${DATA_PATH}/splash.png
-	else
-		if [ "${LH_SYSLINUX_MENU}" = "false" ]
-		then
-			SPLASH="${LIVE_DATA_PATH}/splash.rle"
-		else
-			SPLASH="${LIVE_DATA_PATH}/splash.png"
-		fi
-
-		if [ -n "${LH_SYSLINUX_SPLASH}" ]
-		then
-			if [ ! -e "${LH_SYSLINUX_SPLASH}" ]
-			then
-				Echo_error "%s doen't exist" "${LH_SYSLINUX_SPLASH}"
-				exit 1
-			else
-				rm -f ${SCREEN_PATH}/splash.rle
-				rm -f ${DATA_PATH}/splash.png
-				cp -f "${LH_SYSLINUX_SPLASH}" ${DATA_PATH}/$(basename ${SPLASH})
-			fi
-		fi
-	fi
-}
-
-Configure_syslinux_templates ()
-{
-	templates="$(find ${SYSLINUX_PATH} -type f -name '*.cfg' -o -name '*.txt')"
-
-	for template_file in ${templates}
-	do
-		sed -i -e "s|{\$LINUX_LIVE}|${LINUX_LIVE}|" \
-		       -e "s|{\$LINUX_INSTALL}|${LINUX_INSTALL}|" \
-		       -e "s|{\$MEMTEST}|${MEMTEST}|" \
-		       -e "s|{\$LIVE_SCREEN_PATH}|${LIVE_SCREEN_PATH}|" \
-		       -e "s|{\$LIVE_DATA_PATH}|${LIVE_DATA_PATH}|" \
-		       -e "s|{\$LIVE_KERNEL_PATH}|${LIVE_KERNEL_PATH}|" \
-		       -e "s|{\$SPLASH}|${SPLASH}|" \
-		       -e "s|{\$LH_DISTRIBUTION}|${LH_DISTRIBUTION}|" \
-		       -e "s|{\$LH_DATE}|$(date +%Y%m%d)|" \
-		       -e "s|{\$LH_MEDIA}|${MEDIA}|" \
-		       -e "s|{\$LH_VERSION}|${VERSION}|" \
-		       -e "s|{\$LH_SYSLINUX_TIMEOUT}|${LH_SYSLINUX_TIMEOUT}0|" \
-		$template_file
-	done
-
-	case "${LH_BINARY_IMAGES}" in
-		usb*)
-			if [ -f "${SYSLINUX_PATH}/exithelp.cfg" ]
-			then
-				sed -i -e "s|config isolinux.cfg|config syslinux.cfg|" "${SYSLINUX_PATH}"/exithelp.cfg
-			fi
-			;;
-
-		net)
-			if [ -f "${SCREEN_PATH}/exithelp.cfg" ]
-			then
-				sed -i -e "s|config isolinux.cfg|config ${LIVE_KERNEL_PATH}/pxelinux.cfg/default|" "${SCREEN_PATH}"/exithelp.cfg
-			fi
-			;;
-	esac
-}
 
 # Setting up common variables
 case "${LH_INITRAMFS}" in
@@ -657,3 +345,295 @@ Remove_package
 
 # Creating stage file
 Create_stagefile .stage/binary_syslinux
+}
+
+Utf8_to_latin1 ()
+{
+	VALUE="${1}"
+
+	echo "${VALUE}" | iconv -f utf-8 -t latin1
+}
+
+Syslinux_memtest_entry ()
+{
+	LABEL="${1}"
+	MENULABEL="$(Utf8_to_latin1 "${2}")"
+	KERNEL="${3}"
+
+	MEMTEST="${MEMTEST}\nlabel ${LABEL}\n"
+
+	# Write the menu label if the syslinux menu is being use
+	MEMTEST="${MEMTEST}\tmenu label ${MENULABEL}\n"
+	MEMTEST="${MEMTEST}\tkernel ${LIVE_KERNEL_PATH}/${KERNEL}\n"
+	MEMTEST="$(/bin/echo ${MEMTEST} | sed -e 's|//|/|g')"
+}
+
+Syslinux_live_entry ()
+{
+	LABEL="${1}"
+	MENULABEL="$(Utf8_to_latin1 "${2}")"
+	MENULABEL="${2}"
+	KERNEL="${3}"
+	INITRD="${4}"
+	APPEND="${5}"
+
+	case "${LH_BINARY_IMAGES}" in
+		iso*|usb*)
+			NUMBER="$(ls -1 ${KERNEL_PATH} | grep 'vmlinuz[0-9]\+$' | wc -l)"
+			NUMBER="$((${NUMBER} +1))"
+
+			# Do not add numbering to filenames if first kernel/initrd
+			if [ "${NUMBER}" = "1" ]
+			then
+				NUMBER=""
+			fi
+
+			# Note: ISOLINUX will not find the kernel if the name ends in ".img".
+			if [ -e ${KERNEL_PATH}/${KERNEL} ]
+			then
+				mv ${KERNEL_PATH}/${KERNEL} ${KERNEL_PATH}/vmlinuz${NUMBER}
+			fi
+
+			if [ -e ${KERNEL_PATH}/${INITRD} ]
+			then
+				mv ${KERNEL_PATH}/${INITRD} ${KERNEL_PATH}/initrd${NUMBER}.img
+			fi
+
+			KERNEL=vmlinuz${NUMBER}
+			INITRD=initrd${NUMBER}.img
+		;;
+	esac
+
+	# Regular kernel
+	LINUX_LIVE="${LINUX_LIVE}\nlabel ${LABEL}\n"
+
+	# Write the menu label if the syslinux menu is being use
+	if [ -n "${MENULABEL}" ]
+	then
+		LINUX_LIVE="${LINUX_LIVE}\tmenu label ${MENULABEL}\n"
+	fi
+
+	LINUX_LIVE="${LINUX_LIVE}\tkernel ${LIVE_KERNEL_PATH}/${KERNEL}\n"
+	LINUX_LIVE="${LINUX_LIVE}\tappend initrd=${LIVE_KERNEL_PATH}/${INITRD} boot=${INITFS} ${LH_BOOTAPPEND_LIVE} ${APPEND}\n"
+
+	# Failsafe kernel
+	LINUX_LIVE="${LINUX_LIVE}\nlabel ${LABEL}failsafe\n"
+
+	# Write the menu label if the syslinux menu is being use
+	if [ -n "${MENULABEL}" ]
+	then
+		LINUX_LIVE="${LINUX_LIVE}\tmenu label ${MENULABEL} (failsafe)\n"
+	fi
+
+	LINUX_LIVE="${LINUX_LIVE}\tkernel ${LIVE_KERNEL_PATH}/${KERNEL}\n"
+	LINUX_LIVE="${LINUX_LIVE}\tappend initrd=${LIVE_KERNEL_PATH}/${INITRD} boot=${INITFS} ${LH_BOOTAPPEND_LIVE} ${APPEND} ${FAILSAFE}\n"
+}
+
+Syslinux_install_entry ()
+{
+	LABEL="${1}"
+	KERNEL="${2}"
+	INITRD="${3}"
+	APPEND="${4}"
+
+	# Boot in quiet mode where appropriate
+	QAPPEND="quiet"
+
+	for TYPE in Install Expert Rescue Auto
+	do
+		case "${TYPE}" in
+			Install)
+				TAPPEND="${APPEND} ${QAPPEND}"
+				;;
+
+			Expert)
+				TAPPEND="priority=low ${APPEND}"
+				;;
+
+			Rescue)
+				TAPPEND="rescue/enable=true ${APPEND} ${QAPPEND}"
+				;;
+
+			Auto)
+				TAPPEND="auto=true priority=critical ${APPEND} ${QAPPEND}"
+				;;
+		esac
+
+		case "${LABEL}" in
+			Text)
+				TYPE_SUFFIX=""
+				;;
+			GUI)
+				TYPE_SUFFIX="gui"
+				;;
+		esac
+
+		LINUX_INSTALL="${LINUX_INSTALL}\nlabel $(echo "${TYPE}" | tr A-Z a-z)${TYPE_SUFFIX}\n"
+		LINUX_INSTALL="${LINUX_INSTALL}\tmenu label ${LABEL} ${TYPE}\n"
+		LINUX_INSTALL="${LINUX_INSTALL}\tkernel ${LIVE_INSTALL_KERNEL_PATH}/${KERNEL}\n"
+		LINUX_INSTALL="${LINUX_INSTALL}\tappend initrd=${LIVE_INSTALL_KERNEL_PATH}/${INITRD} ${TAPPEND} ${LH_BOOTAPPEND_INSTALL}\n"
+	done
+}
+
+Copy_syslinux_templates ()
+{
+	cp -r "${TEMPLATES}"/common/* ${SCREEN_PATH}
+
+	if [ "${LH_SYSLINUX_MENU}" = "false" ]
+	then
+		cp "${TEMPLATES}"/normal/* ${SCREEN_PATH}
+	else
+		cp "${TEMPLATES}"/menu/* ${SCREEN_PATH}
+
+		case "${LH_SYSLINUX_MENU}" in
+			gfxboot)
+				MENUMODULE="gfxboot.c32"
+				;;
+
+			menu)
+				MENUMODULE="menu.c32"
+				;;
+
+			vesamenu)
+				MENUMODULE="vesamenu.c32"
+				;;
+
+			*)
+				if [ -z "${LH_SYSLINUX_CFG}" ]
+				then
+					MENUMODULE=$(grep 'menu.c32' ${TEMPLATES}/menu/syslinux.cfg | sed 's|default\s*.*/\(.*menu.c32\)$|\1|g')
+				else
+					LH_SYSLINUX_CFG="${LH_SYSLINUX_CFG:-${TEMPLATES}/menu/syslinux.cfg}"
+				fi
+				;;
+		esac
+
+		case "${LH_CHROOT_BUILD}" in
+			true)
+				cp chroot/usr/lib/syslinux/"${MENUMODULE}" ${DATA_PATH}
+				;;
+			false)
+				cp /usr/lib/syslinux/"${MENUMODULE}" ${DATA_PATH}
+				;;
+		esac
+	fi
+
+	if ls "${TEMPLATES}/${LH_LANGUAGE}"/* > /dev/null 2>&1
+	then
+		cp -r "${TEMPLATES}"/"${LH_LANGUAGE}"/* ${SCREEN_PATH}
+	else
+		if ls "${TEMPLATES}"/en/* > /dev/null 2>&1
+		then
+			cp -r "${TEMPLATES}"/en/* ${SCREEN_PATH}
+		fi
+	fi
+
+	if ls ${SCREEN_PATH}/*.live > /dev/null 2>&1
+	then
+		for FILE in ${SCREEN_PATH}/*.live
+		do
+			mv ${FILE} $(dirname ${FILE})/$(basename ${FILE} .live)
+		done
+	fi
+
+	if [ "${LH_DEBIAN_INSTALLER}" != "false" ]
+	then
+		if ls ${SCREEN_PATH}/*.install > /dev/null 2>&1
+		then
+			for FILE in ${SCREEN_PATH}/*.install
+			do
+				mv ${FILE} $(dirname ${FILE})/$(basename ${FILE} .install)
+			done
+		fi
+
+		case "${LH_ARCHITECTURE}" in
+			amd64|i386|powerpc)
+				if ls ${SCREEN_PATH}/*.install.g-i > /dev/null 2>&1
+				then
+					for FILE in ${SCREEN_PATH}/*.install.g-i
+					do
+						mv ${FILE} $(dirname ${FILE})/$(basename ${FILE} .install.g-i)
+					done
+				fi
+				;;
+
+			*)
+				rm -f ${SCREEN_PATH}/*.install.g-i
+				;;
+		esac
+	else
+		rm -f ${SCREEN_PATH}/*.install*
+	fi
+
+	if [ "${LH_SYSLINUX_MENU}" != "false" ]
+	then
+		rm -f ${DATA_PATH}/boot.txt
+	fi
+
+	# Copying custom splash screen
+	if [ "${LH_SYSLINUX_SPLASH}" = "none" ]
+	then
+		# no splash screen
+		SPLASH=""
+		rm -f ${SCREEN_PATH}/splash.rle
+		rm -f ${DATA_PATH}/splash.png
+	else
+		if [ "${LH_SYSLINUX_MENU}" = "false" ]
+		then
+			SPLASH="${LIVE_DATA_PATH}/splash.rle"
+		else
+			SPLASH="${LIVE_DATA_PATH}/splash.png"
+		fi
+
+		if [ -n "${LH_SYSLINUX_SPLASH}" ]
+		then
+			if [ ! -e "${LH_SYSLINUX_SPLASH}" ]
+			then
+				Echo_error "%s doen't exist" "${LH_SYSLINUX_SPLASH}"
+				exit 1
+			else
+				rm -f ${SCREEN_PATH}/splash.rle
+				rm -f ${DATA_PATH}/splash.png
+				cp -f "${LH_SYSLINUX_SPLASH}" ${DATA_PATH}/$(basename ${SPLASH})
+			fi
+		fi
+	fi
+}
+
+Configure_syslinux_templates ()
+{
+	templates="$(find ${SYSLINUX_PATH} -type f -name '*.cfg' -o -name '*.txt')"
+
+	for template_file in ${templates}
+	do
+		sed -i -e "s|{\$LINUX_LIVE}|${LINUX_LIVE}|" \
+		       -e "s|{\$LINUX_INSTALL}|${LINUX_INSTALL}|" \
+		       -e "s|{\$MEMTEST}|${MEMTEST}|" \
+		       -e "s|{\$LIVE_SCREEN_PATH}|${LIVE_SCREEN_PATH}|" \
+		       -e "s|{\$LIVE_DATA_PATH}|${LIVE_DATA_PATH}|" \
+		       -e "s|{\$LIVE_KERNEL_PATH}|${LIVE_KERNEL_PATH}|" \
+		       -e "s|{\$SPLASH}|${SPLASH}|" \
+		       -e "s|{\$LH_DISTRIBUTION}|${LH_DISTRIBUTION}|" \
+		       -e "s|{\$LH_DATE}|$(date +%Y%m%d)|" \
+		       -e "s|{\$LH_MEDIA}|${MEDIA}|" \
+		       -e "s|{\$LH_VERSION}|${VERSION}|" \
+		       -e "s|{\$LH_SYSLINUX_TIMEOUT}|${LH_SYSLINUX_TIMEOUT}0|" \
+		$template_file
+	done
+
+	case "${LH_BINARY_IMAGES}" in
+		usb*)
+			if [ -f "${SYSLINUX_PATH}/exithelp.cfg" ]
+			then
+				sed -i -e "s|config isolinux.cfg|config syslinux.cfg|" "${SYSLINUX_PATH}"/exithelp.cfg
+			fi
+			;;
+
+		net)
+			if [ -f "${SCREEN_PATH}/exithelp.cfg" ]
+			then
+				sed -i -e "s|config isolinux.cfg|config ${LIVE_KERNEL_PATH}/pxelinux.cfg/default|" "${SCREEN_PATH}"/exithelp.cfg
+			fi
+			;;
+	esac
+}
