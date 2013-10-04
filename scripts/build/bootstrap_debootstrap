@@ -16,7 +16,6 @@ import shutil
 import subprocess
 import sys
 
-from __future__ import print_function
 
 # TODO:
 # - lockfile handling
