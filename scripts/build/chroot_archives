@@ -550,12 +550,10 @@ EOF
 if echo "${LB_PARENT_MIRROR_CHROOT}" | grep -q '^file:/'
 then
     BIND_DEST=$(echo "${LB_PARENT_MIRROR_CHROOT}" | sed -e 's|file:/\+||')
-    if [ -d "chroot/${BIND_DEST}" ] &&
-	[ "$(stat -fc%t:%T "chroot/${BIND_DEST}")" != \
-	    "$(stat -fc%t:%T "chroot/${BIND_DEST}/..")" ]
+    if [ -d "chroot/${BIND_DEST}" ]
     then
 	Echo_message "Unbinding local repository path"
-	umount --lazy "chroot/${BIND_DEST}" || true
+	umount "chroot/${BIND_DEST}"  > /dev/null 2>&1 || true
     fi
 fi
 
