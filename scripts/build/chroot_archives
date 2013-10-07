@@ -541,6 +541,18 @@ EOF
 			mv chroot/etc/apt/sources.list.d/zz-sources.list chroot/etc/apt/sources.list
 		fi
 
+		# Unmount local repository
+if echo "${LB_PARENT_MIRROR_CHROOT}" | grep -q '^file:/'
+then
+    BIND_DEST=$(echo "${LB_PARENT_MIRROR_CHROOT}" | sed -e 's|file:/\+||')
+    if [ -d "chroot/${BIND_DEST}" ] &&
+	[ "$(stat -fc%t:%T "chroot/${BIND_DEST}")" !=
+	    "$(stat -fc%t:%T "chroot/${BIND_DEST}/..")" ]
+    then
+	umount --lazy "chroot/${BIND_DEST}" || true
+    fi
+fi
+
 		# Configure generic indices
 		# Don't do anything if it's not required
 		if [ "${LB_PARENT_MIRROR_CHROOT}" = "${LB_PARENT_MIRROR_BINARY}" ] && \
