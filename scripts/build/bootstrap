@@ -36,7 +36,7 @@ Setup_cleanup
 
 # Bootstrapping system
 lb bootstrap_cache restore ${@}
-lb bootstrap_${LB_BOOTSTRAP}
+lb bootstrap_${LB_BOOTSTRAP} ${@}
 
 # Configuring chroot
 lb chroot_devpts install ${@}
