@@ -1,3 +1,9 @@
+live-build (4.0.3-1obs1) unstable; urgency=low
+
+  * Add support for bind mounted repositories.
+
+ -- Jan Blunck <jblunck@vyatta.com>  Fri, 28 Nov 2014 20:33:15 +0100
+
 live-build (4.0.3-1) unstable; urgency=low
 
   [ Richard Nelson ]
