@@ -1,0 +1,19 @@
+commit b530b488dadf7fc2c3f22c8e2bbc02b69b799ed9
+Author: Jan Blunck <jblunck@brocade.com>
+Date:   Mon Jun 22 11:16:50 2015 -0700
+
+    Pass ${APT_OPTIONS} in bootstrap_archive-keys
+
+diff --git a/scripts/build/bootstrap_archive-keys b/scripts/build/bootstrap_archive-keys
+index 4b9324f..3c9ce06 100755
+--- a/scripts/build/bootstrap_archive-keys
++++ b/scripts/build/bootstrap_archive-keys
+@@ -71,7 +71,7 @@ do
+ 	rm -f chroot/key.asc chroot/key.asc.sig
+ done
+ 
+-Chroot chroot "apt-get update"
++Chroot chroot "apt-get ${APT_OPTIONS} update"
+ 
+ # Creating stage file
+ Create_stagefile .build/bootstrap_archive-keys
