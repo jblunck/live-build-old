@@ -1,3 +1,9 @@
+live-build (4.0.3-1obs2) unstable; urgency=low
+
+  * Pass ${APT_OPTIONS} in bootstrap_archive-keys
+
+ -- Jan Blunck <jblunck@brocade.com>  Mon, 22 Jun 2015 11:17:13 -0700
+
 live-build (4.0.3-1obs1) unstable; urgency=low
 
   * Add support for bind mounted repositories.
